@@ -4,8 +4,13 @@ from agentes import ruido, agentes_quimicos, vibracao, calor, radiacao, eletrici
 from agentes.utils import DATA_FORMAT, formatar_data
 from itertools import groupby
 from operator import itemgetter
+import os
 
-app = Flask(__name__)
+app = Flask(__name__, 
+    static_url_path='',
+    static_folder='static',
+    template_folder='templates'
+)
 
 AGENTES = {
     'ruido': ruido,
