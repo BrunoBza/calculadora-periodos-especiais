@@ -56,12 +56,12 @@ def avaliar():
                 
                 # Conversão e validação das datas
                 try:
-                    data_inicio = datetime.strptime(periodo['data_inicio'], DATA_FORMAT).date()
-                    data_fim = datetime.strptime(periodo['data_fim'], DATA_FORMAT).date()
+                    data_inicio = datetime.strptime(periodo['data_inicio'], DATA_FORMAT)
+                    data_fim = datetime.strptime(periodo['data_fim'], DATA_FORMAT)
                 except ValueError:
                     raise ValueError("Formato de data inválido. Use DD/MM/AAAA")
                 
-                if data_fim < data_inicio:
+                if data_fim.date() < data_inicio.date():
                     raise ValueError("Data fim não pode ser anterior à data início")
                 
                 # Validação do agente
@@ -77,8 +77,23 @@ def avaliar():
                 except ValueError:
                     raise ValueError("Intensidade inválida")
                 
-                # Processa o período com o módulo do agente específico
-                subperiodos = agente.processar_periodo(data_inicio, data_fim, intensidade)
+                # Validação da unidade de medida para vibração
+                if periodo['agente'] == 'vibracao':
+                    if 'unidade_medida' not in periodo:
+                        raise ValueError("Unidade de medida é obrigatória para vibração")
+                    if periodo['unidade_medida'] not in ['gpm', 'ms2', 'ms175']:
+                        raise ValueError("Unidade de medida inválida para vibração")
+                    
+                    # Processa o período com o módulo de vibração incluindo a unidade
+                    subperiodos = agente.processar_periodo(
+                        data_inicio,
+                        data_fim,
+                        intensidade,
+                        periodo['unidade_medida']
+                    )
+                else:
+                    # Processa o período com o módulo do agente específico
+                    subperiodos = agente.processar_periodo(data_inicio, data_fim, intensidade)
                 
                 # Adiciona cada subperíodo como um resultado separado
                 for subperiodo in subperiodos:
@@ -131,6 +146,20 @@ def gerar_minuta(resultados):
                 'anexo': 'Anexo IV do Decreto Federal nº 3.048/1999, com ' +
                         'redação dada pelo Decreto Federal nº 4.882/2003'
             }
+        },
+        'vibracao': {
+            'gpm': {
+                'codigo': '1.1.5',
+                'anexo': 'Anexo do Decreto Federal nº 53.831/1964'
+            },
+            'ms2': {
+                'codigo': '2.0.2',
+                'anexo': 'Anexo IV do Decreto Federal nº 2.172/1997 e Decreto nº 3.048/1999'
+            },
+            'ms175': {
+                'codigo': '2.0.2',
+                'anexo': 'Anexo IV do Decreto Federal nº 3.048/1999, com redação dada pelo Decreto Federal nº 8.123/2013'
+            }
         }
     }
 
@@ -145,8 +174,16 @@ def gerar_minuta(resultados):
             f"{periodo['agente'].replace('_', ' ')} o período de "
             f"{periodo['data_inicio']} a {periodo['data_fim']}, com "
             f"exposição a um nível de {periodo['intensidade']} "
-            f"{resultados[0]['subperiodo']['unidade']}."
         )
+        if periodo['agente'] == 'vibracao':
+            unidades = {
+                'gpm': 'golpes por minuto',
+                'ms2': 'm/s²',
+                'ms175': 'm/s1.75'
+            }
+            texto += f"{unidades[periodo['unidade_medida']]}."
+        else:
+            texto += f"{resultados[0]['subperiodo'].get('unidade', '')}."
         minuta.append(texto)
         minuta.append("")
     else:
@@ -159,8 +196,16 @@ def gerar_minuta(resultados):
             texto = (
                 f"De {periodo['data_inicio']} a {periodo['data_fim']}, "
                 f"com exposição a um nível de {periodo['intensidade']} "
-                f"{resultados[0]['subperiodo']['unidade']}"
             )
+            if periodo['agente'] == 'vibracao':
+                unidades = {
+                    'gpm': 'golpes por minuto',
+                    'ms2': 'm/s²',
+                    'ms175': 'm/s1.75'
+                }
+                texto += f"{unidades[periodo['unidade_medida']]}"
+            else:
+                texto += f"{resultados[0]['subperiodo'].get('unidade', '')}"
             minuta.append(texto + ("." if i == len(periodos) - 1 else "; e"))
         minuta.append("")
 
@@ -169,23 +214,34 @@ def gerar_minuta(resultados):
     periodos_especiais = [r for r in resultados if r['subperiodo']['eh_especial']]
     for resultado in periodos_especiais:
         subperiodo = resultado['subperiodo']
-        agente = resultado['periodo_original']['agente']
-        intensidade = resultado['periodo_original']['intensidade']
+        periodo_original = resultado['periodo_original']
+        agente = periodo_original['agente']
+        intensidade = periodo_original['intensidade']
         
-        info_anexo = codigos_anexos.get(agente, {}).get(
-            str(int(subperiodo['limite'])), {}
-        )
-        codigo = info_anexo.get('codigo', '')
-        anexo = info_anexo.get('anexo', '')
-        
-        texto = (
-            f"O período de {subperiodo['data_inicio']} a "
-            f"{subperiodo['data_fim']} deve ser enquadrado como especial, "
-            f"em razão de exposição a {agente.replace('_', ' ')} de "
-            f"{intensidade} {subperiodo['unidade']}, superior ao limite de "
-            f"{subperiodo['limite']}{subperiodo['unidade']} previsto no "
-            f"código {codigo}, do {anexo}."
-        )
+        if agente == 'vibracao':
+            unidade_medida = periodo_original['unidade_medida']
+            info_anexo = codigos_anexos[agente][unidade_medida]
+            texto = (
+                f"O período de {subperiodo['data_inicio']} a "
+                f"{subperiodo['data_fim']} deve ser enquadrado como especial. "
+                f"{subperiodo['mensagem']} "
+                f"Enquadramento previsto no código {info_anexo['codigo']}, "
+                f"do {info_anexo['anexo']}."
+            )
+        else:
+            info_anexo = codigos_anexos.get(agente, {}).get(
+                str(int(subperiodo['limite'])), {}
+            )
+            codigo = info_anexo.get('codigo', '')
+            anexo = info_anexo.get('anexo', '')
+            texto = (
+                f"O período de {subperiodo['data_inicio']} a "
+                f"{subperiodo['data_fim']} deve ser enquadrado como especial, "
+                f"em razão de exposição a {agente.replace('_', ' ')} de "
+                f"{intensidade} {subperiodo['unidade']}, superior ao limite de "
+                f"{subperiodo['limite']}{subperiodo['unidade']} previsto no "
+                f"código {codigo}, do {anexo}."
+            )
         minuta.append(texto)
         minuta.append("")
 
@@ -193,21 +249,32 @@ def gerar_minuta(resultados):
     periodos_nao_especiais = [r for r in resultados if not r['subperiodo']['eh_especial']]
     for resultado in periodos_nao_especiais:
         subperiodo = resultado['subperiodo']
-        agente = resultado['periodo_original']['agente']
+        periodo_original = resultado['periodo_original']
+        agente = periodo_original['agente']
         
-        info_anexo = codigos_anexos.get(agente, {}).get(
-            str(int(subperiodo['limite'])), {}
-        )
-        codigo = info_anexo.get('codigo', '')
-        anexo = info_anexo.get('anexo', '')
-        
-        texto = (
-            f"O período de {subperiodo['data_inicio']} a "
-            f"{subperiodo['data_fim']} não deve ser enquadrado como "
-            f"especial, por não ultrapassar o limite de "
-            f"{subperiodo['limite']}{subperiodo['unidade']}, previsto no "
-            f"código {codigo}, do {anexo}."
-        )
+        if agente == 'vibracao':
+            unidade_medida = periodo_original['unidade_medida']
+            info_anexo = codigos_anexos[agente][unidade_medida]
+            texto = (
+                f"O período de {subperiodo['data_inicio']} a "
+                f"{subperiodo['data_fim']} não deve ser enquadrado como especial. "
+                f"{subperiodo['mensagem']} "
+                f"Enquadramento previsto no código {info_anexo['codigo']}, "
+                f"do {info_anexo['anexo']}."
+            )
+        else:
+            info_anexo = codigos_anexos.get(agente, {}).get(
+                str(int(subperiodo['limite'])), {}
+            )
+            codigo = info_anexo.get('codigo', '')
+            anexo = info_anexo.get('anexo', '')
+            texto = (
+                f"O período de {subperiodo['data_inicio']} a "
+                f"{subperiodo['data_fim']} não deve ser enquadrado como "
+                f"especial, por não ultrapassar o limite de "
+                f"{subperiodo['limite']}{subperiodo['unidade']}, previsto no "
+                f"código {codigo}, do {anexo}."
+            )
         minuta.append(texto)
         minuta.append("")
 
@@ -241,4 +308,5 @@ def gerar_minuta(resultados):
     return "\n".join(minuta)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)

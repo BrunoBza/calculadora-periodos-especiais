@@ -71,7 +71,8 @@ def formatar_resultado(data_inicio, data_fim, agente, intensidade, eh_especial, 
         'data_fim': formatar_data(data_fim),
         'intensidade': intensidade,
         'eh_especial': eh_especial,
-        'unidade': unidade
+        'unidade': unidade,
+        'unidade_limite': unidade  # Adicionando a unidade do limite
     }
     
     if limite is not None:

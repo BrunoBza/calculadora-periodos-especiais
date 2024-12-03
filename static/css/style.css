@@ -1,0 +1,14 @@
+#minuta {
+    white-space: pre-wrap;       /* preserva quebras de linha e permite quebra automática */
+    word-wrap: break-word;       /* quebra palavras longas */
+    overflow-wrap: break-word;   /* quebra palavras longas (mais moderno) */
+    max-width: 100%;            /* limita a largura máxima */
+    font-family: monospace;     /* fonte monoespaçada para melhor legibilidade */
+    line-height: 1.5;          /* espaçamento entre linhas */
+    padding: 15px;             /* espaçamento interno */
+    margin: 0;                 /* remove margens */
+    border-radius: 4px;        /* cantos arredondados */
+    background-color: #f8f9fa; /* fundo claro */
+    border: 1px solid #dee2e6; /* borda sutil */
+    color: #212529;           /* cor do texto */
+}

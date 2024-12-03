@@ -17,11 +17,11 @@ function templatePeriodo(id) {
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Agente Nocivo</label>
-                    <select class="form-select" name="agente" required>
+                    <select class="form-select" name="agente" required onchange="atualizarCamposAgente(this)">
                         <option value="">Selecione...</option>
                         <option value="ruido">Ruído</option>
+                        <option value="vibracao">Vibração de Corpo Inteiro</option>
                         <option value="agentes_quimicos">Agentes Químicos</option>
-                        <option value="vibracao">Vibração</option>
                         <option value="calor">Calor</option>
                         <option value="radiacao">Radiação</option>
                         <option value="eletricidade">Eletricidade</option>
@@ -29,7 +29,14 @@ function templatePeriodo(id) {
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Intensidade</label>
-                    <input type="number" step="0.1" class="form-control" name="intensidade" required>
+                    <div class="input-group">
+                        <input type="number" step="0.1" class="form-control" name="intensidade" required>
+                        <select class="form-select d-none" name="unidade_medida" style="max-width: 120px;">
+                            <option value="ms2">m/s²</option>
+                            <option value="ms175">m/s1.75</option>
+                            <option value="gpm">golpes/min</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="col-md-1 d-flex align-items-end">
                     <button type="button" class="btn btn-danger" onclick="removerPeriodo(${id})">
@@ -85,6 +92,22 @@ function copiarMinuta() {
         .catch(err => console.error('Erro ao copiar minuta:', err));
 }
 
+// Função para atualizar campos baseado no agente selecionado
+function atualizarCamposAgente(select) {
+    const periodo = select.closest('.periodo');
+    const unidadeSelect = periodo.querySelector('[name="unidade_medida"]');
+    const intensidadeInput = periodo.querySelector('[name="intensidade"]');
+    
+    if (select.value === 'vibracao') {
+        unidadeSelect.classList.remove('d-none');
+        // Ajusta o step do input de intensidade para permitir mais casas decimais
+        intensidadeInput.setAttribute('step', '0.01');
+    } else {
+        unidadeSelect.classList.add('d-none');
+        intensidadeInput.setAttribute('step', '0.1');
+    }
+}
+
 // Processa o formulário
 document.getElementById('periodoForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -92,12 +115,15 @@ document.getElementById('periodoForm').addEventListener('submit', async (e) => {
     const periodos = Array.from(document.querySelectorAll('.periodo')).map(periodo => {
         const dataInicio = periodo.querySelector('[name="data_inicio"]');
         const dataFim = periodo.querySelector('[name="data_fim"]');
+        const agente = periodo.querySelector('[name="agente"]').value;
+        const unidadeSelect = periodo.querySelector('[name="unidade_medida"]');
         
         return {
             data_inicio: dataInicio.getAttribute('data-valor-formatado') || formatarData(dataInicio.value),
             data_fim: dataFim.getAttribute('data-valor-formatado') || formatarData(dataFim.value),
-            agente: periodo.querySelector('[name="agente"]').value,
-            intensidade: periodo.querySelector('[name="intensidade"]').value
+            agente: agente,
+            intensidade: periodo.querySelector('[name="intensidade"]').value,
+            unidade_medida: agente === 'vibracao' ? unidadeSelect.value : null
         };
     });
 
@@ -126,7 +152,7 @@ document.getElementById('periodoForm').addEventListener('submit', async (e) => {
                 <div class="alert ${subperiodo.eh_especial ? 'alert-success' : 'alert-danger'} mb-3">
                     <p class="mb-1"><strong>Período:</strong> ${subperiodo.data_inicio} a ${subperiodo.data_fim}</p>
                     <p class="mb-1"><strong>Agente:</strong> ${periodo.agente.replace('_', ' ').charAt(0).toUpperCase() + periodo.agente.slice(1)}</p>
-                    <p class="mb-1"><strong>Limite no período:</strong> >${subperiodo.limite} ${subperiodo.unidade}</p>
+                    <p class="mb-1"><strong>Limite no período:</strong> >${subperiodo.limite} ${subperiodo.unidade_limite}</p>
                     <p class="mb-1"><strong>Intensidade informada:</strong> ${subperiodo.intensidade} ${subperiodo.unidade}</p>
                     <p class="mb-0"><strong>Resultado:</strong> ${subperiodo.eh_especial ? 'Período Especial' : 'Período Não Especial'}</p>
                     ${subperiodo.detalhes ? Object.entries(subperiodo.detalhes).map(([chave, valor]) => 
