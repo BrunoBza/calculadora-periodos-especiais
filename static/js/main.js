@@ -32,8 +32,8 @@ function templatePeriodo(id) {
                     <div class="input-group">
                         <input type="number" step="0.1" class="form-control" name="intensidade" required>
                         <select class="form-select d-none" name="unidade_medida" style="max-width: 120px;">
-                            <option value="ms2">m/s²</option>
-                            <option value="ms175">m/s1.75</option>
+                            <option value="ms2">m/s² (aren)</option>
+                            <option value="ms175">m/s1,75 (VDVR)</option>
                             <option value="gpm">golpes/min</option>
                         </select>
                     </div>
@@ -154,6 +154,7 @@ document.getElementById('periodoForm').addEventListener('submit', async (e) => {
                     <p class="mb-1"><strong>Agente:</strong> ${periodo.agente.replace('_', ' ').charAt(0).toUpperCase() + periodo.agente.slice(1)}</p>
                     <p class="mb-1"><strong>Limite no período:</strong> >${subperiodo.limite} ${subperiodo.unidade_limite}</p>
                     <p class="mb-1"><strong>Intensidade informada:</strong> ${subperiodo.intensidade} ${subperiodo.unidade}</p>
+                    <p class="mb-1"><strong>Fundamento:</strong> ${subperiodo.fundamento}</p>
                     <p class="mb-0"><strong>Resultado:</strong> ${subperiodo.eh_especial ? 'Período Especial' : 'Período Não Especial'}</p>
                     ${subperiodo.detalhes ? Object.entries(subperiodo.detalhes).map(([chave, valor]) => 
                         `<p class="mb-0"><strong>${chave}:</strong> ${valor}</p>`).join('') : ''}

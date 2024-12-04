@@ -27,6 +27,11 @@ FUNDAMENTOS_LEGAIS = {
         '80': 'Decreto nº 53.831/64',
         '90': 'Decreto nº 2.172/97',
         '85': 'Decreto nº 4.882/2003'
+    },
+    'vibracao': {
+        'ate_1997': 'Anexo do Decreto nº 53.831/1964, código 1.1.5',
+        'de_1997_a_2014': 'Decreto nº 2.172/1997 e norma ISO 2631/1997',
+        'apos_2014': 'Anexo 8, da NR-15, com as alterações da Portaria MTE nº 1.297/2014'
     }
 }
 
@@ -129,184 +134,143 @@ def gerar_minuta(resultados):
         if chave not in periodos_agrupados:
             periodos_agrupados[chave] = periodo
 
-    # Dicionário com os códigos dos anexos
-    codigos_anexos = {
-        'ruido': {
-            '80': {
-                'codigo': '1.1.6',
-                'anexo': 'Anexo do Decreto Federal nº 53.831/1964'
-            },
-            '90': {
-                'codigo': '2.0.1',
-                'anexo': 'Anexo IV do Decreto Federal nº 2.172/1997 e ' +
-                        'Decreto nº 3.048/1999 (redação original)'
-            },
-            '85': {
-                'codigo': '2.0.1',
-                'anexo': 'Anexo IV do Decreto Federal nº 3.048/1999, com ' +
-                        'redação dada pelo Decreto Federal nº 4.882/2003'
-            }
-        },
-        'vibracao': {
-            'gpm': {
-                'codigo': '1.1.5',
-                'anexo': 'Anexo do Decreto Federal nº 53.831/1964'
-            },
-            'ms2': {
-                'codigo': '2.0.2',
-                'anexo': 'Anexo IV do Decreto Federal nº 2.172/1997 e Decreto nº 3.048/1999'
-            },
-            'ms175': {
-                'codigo': '2.0.2',
-                'anexo': 'Anexo IV do Decreto Federal nº 3.048/1999, com redação dada pelo Decreto Federal nº 8.123/2013'
-            }
-        }
-    }
-
     minuta = []
 
     # 1. Períodos em discussão
     periodos = list(periodos_agrupados.values())
     if len(periodos) == 1:
         periodo = periodos[0]
-        texto = (
-            f"No caso concreto, é controvertido quanto ao agente nocivo "
-            f"{periodo['agente'].replace('_', ' ')} o período de "
-            f"{periodo['data_inicio']} a {periodo['data_fim']}, com "
-            f"exposição a um nível de {periodo['intensidade']} "
-        )
         if periodo['agente'] == 'vibracao':
-            unidades = {
-                'gpm': 'golpes por minuto',
-                'ms2': 'm/s²',
-                'ms175': 'm/s1.75'
-            }
-            texto += f"{unidades[periodo['unidade_medida']]}."
+            texto = (
+                f"No caso concreto, é controvertido quanto ao agente nocivo vibração "
+                f"o período de {periodo['data_inicio']} a {periodo['data_fim']}, "
+                f"com exposição à vibração com intensidade informada de {periodo['intensidade']} "
+                f"{resultados[0]['subperiodo'].get('unidade', '')}."
+            )
         else:
-            texto += f"{resultados[0]['subperiodo'].get('unidade', '')}."
+            texto = (
+                f"No caso concreto, é controvertido quanto ao agente nocivo "
+                f"{periodo['agente'].replace('_', ' ')} o período de "
+                f"{periodo['data_inicio']} a {periodo['data_fim']}, com "
+                f"exposição a um nível de {periodo['intensidade']} "
+                f"{resultados[0]['subperiodo'].get('unidade', '')}."
+            )
         minuta.append(texto)
         minuta.append("")
     else:
-        minuta.append(
-            f"No caso concreto, são controvertidos quanto ao agente nocivo "
-            f"{periodos[0]['agente'].replace('_', ' ')} os seguintes períodos:"
-        )
+        minuta.append("No caso concreto, são controvertidos os seguintes períodos:")
         minuta.append("")
         for i, periodo in enumerate(periodos):
-            texto = (
-                f"De {periodo['data_inicio']} a {periodo['data_fim']}, "
-                f"com exposição a um nível de {periodo['intensidade']} "
-            )
             if periodo['agente'] == 'vibracao':
                 unidades = {
                     'gpm': 'golpes por minuto',
-                    'ms2': 'm/s²',
-                    'ms175': 'm/s1.75'
+                    'ms2': 'm/s² (aren)',
+                    'ms175': 'm/s1,75(VDVR)'
                 }
-                texto += f"{unidades[periodo['unidade_medida']]}"
+                texto = (
+                    f"De {periodo['data_inicio']} a {periodo['data_fim']}, "
+                    f"em razão do agente nocivo vibração, "
+                    f"com exposição a uma intensidade informada de {periodo['intensidade']} "
+                    f"{unidades[periodo['unidade_medida']]}"
+                )
             else:
-                texto += f"{resultados[0]['subperiodo'].get('unidade', '')}"
-            minuta.append(texto + ("." if i == len(periodos) - 1 else "; e"))
+                texto = (
+                    f"De {periodo['data_inicio']} a {periodo['data_fim']}, "
+                    f"em razão do agente nocivo {periodo['agente'].replace('_', ' ')}, "
+                    f"com exposição a um nível de {periodo['intensidade']} "
+                    f"{resultados[0]['subperiodo'].get('unidade', '')}"
+                )
+            minuta.append(texto + ("." if i == len(periodos) - 1 else ";"))
         minuta.append("")
-
     # 2. Análise dos subperíodos
-    # Primeiro os períodos especiais
-    periodos_especiais = [r for r in resultados if r['subperiodo']['eh_especial']]
-    for resultado in periodos_especiais:
+    # Ordena todos os subperíodos cronologicamente
+    todos_subperiodos = []
+    for resultado in resultados:
         subperiodo = resultado['subperiodo']
         periodo_original = resultado['periodo_original']
         agente = periodo_original['agente']
         intensidade = periodo_original['intensidade']
         
-        if agente == 'vibracao':
-            unidade_medida = periodo_original['unidade_medida']
-            info_anexo = codigos_anexos[agente][unidade_medida]
-            texto = (
-                f"O período de {subperiodo['data_inicio']} a "
-                f"{subperiodo['data_fim']} deve ser enquadrado como especial. "
-                f"{subperiodo['mensagem']} "
-                f"Enquadramento previsto no código {info_anexo['codigo']}, "
-                f"do {info_anexo['anexo']}."
-            )
-        else:
-            info_anexo = codigos_anexos.get(agente, {}).get(
-                str(int(subperiodo['limite'])), {}
-            )
-            codigo = info_anexo.get('codigo', '')
-            anexo = info_anexo.get('anexo', '')
-            texto = (
-                f"O período de {subperiodo['data_inicio']} a "
-                f"{subperiodo['data_fim']} deve ser enquadrado como especial, "
-                f"em razão de exposição a {agente.replace('_', ' ')} de "
-                f"{intensidade} {subperiodo['unidade']}, superior ao limite de "
-                f"{subperiodo['limite']}{subperiodo['unidade']} previsto no "
-                f"código {codigo}, do {anexo}."
-            )
-        minuta.append(texto)
-        minuta.append("")
-
-    # Depois os períodos não especiais
-    periodos_nao_especiais = [r for r in resultados if not r['subperiodo']['eh_especial']]
-    for resultado in periodos_nao_especiais:
-        subperiodo = resultado['subperiodo']
-        periodo_original = resultado['periodo_original']
+        data_inicio = datetime.strptime(subperiodo['data_inicio'], DATA_FORMAT)
+        todos_subperiodos.append({
+            'data_inicio': data_inicio,
+            'subperiodo': subperiodo,
+            'periodo_original': periodo_original
+        })
+    
+    # Ordena os subperíodos por data de início
+    todos_subperiodos.sort(key=lambda x: x['data_inicio'])
+    
+    # Processa cada subperíodo na ordem cronológica
+    for item in todos_subperiodos:
+        subperiodo = item['subperiodo']
+        periodo_original = item['periodo_original']
         agente = periodo_original['agente']
+        intensidade = periodo_original['intensidade']
         
         if agente == 'vibracao':
-            unidade_medida = periodo_original['unidade_medida']
-            info_anexo = codigos_anexos[agente][unidade_medida]
-            texto = (
-                f"O período de {subperiodo['data_inicio']} a "
-                f"{subperiodo['data_fim']} não deve ser enquadrado como especial. "
-                f"{subperiodo['mensagem']} "
-                f"Enquadramento previsto no código {info_anexo['codigo']}, "
-                f"do {info_anexo['anexo']}."
-            )
+            if not subperiodo['eh_especial']:
+                # Verifica se é caso de unidade inadequada
+                if subperiodo.get('mensagem_unidade_inadequada', False):
+                    data_inicio = subperiodo['data_inicio']
+                    data_fim = subperiodo['data_fim']
+                    texto = (
+                        f"O período de {data_inicio} a {data_fim} não deve ser enquadrado como especial, "
+                        f"em razão da utilização de metodologia inapropriada."
+                    )
+                else:
+                    texto = (
+                        f"O período de {subperiodo['data_inicio']} a {subperiodo['data_fim']} "
+                        f"não deve ser enquadrado como especial, {subperiodo['mensagem']}."
+                    )
+            else:
+                texto = (
+                    f"O período de {subperiodo['data_inicio']} a {subperiodo['data_fim']} "
+                    f"deve ser enquadrado como especial, {subperiodo['mensagem']}."
+                )
         else:
-            info_anexo = codigos_anexos.get(agente, {}).get(
-                str(int(subperiodo['limite'])), {}
-            )
-            codigo = info_anexo.get('codigo', '')
-            anexo = info_anexo.get('anexo', '')
-            texto = (
-                f"O período de {subperiodo['data_inicio']} a "
-                f"{subperiodo['data_fim']} não deve ser enquadrado como "
-                f"especial, por não ultrapassar o limite de "
-                f"{subperiodo['limite']}{subperiodo['unidade']}, previsto no "
-                f"código {codigo}, do {anexo}."
-            )
-        minuta.append(texto)
-        minuta.append("")
-
-    # 3. Conclusão
-    if not periodos_especiais:
-        minuta.append("Dessa forma, não reconheço nenhum período como especial.")
-        minuta.append("")
-    else:
-        periodos_texto = []
-        for i, resultado in enumerate(periodos_especiais):
-            subperiodo = resultado['subperiodo']
-            if i == len(periodos_especiais) - 1 and i > 0:
-                periodos_texto.append(
-                    f"e de {subperiodo['data_inicio']} a "
-                    f"{subperiodo['data_fim']}"
+            if subperiodo['eh_especial']:
+                texto = (
+                    f"O período de {subperiodo['data_inicio']} a {subperiodo['data_fim']} "
+                    f"deve ser enquadrado como especial, em razão de exposição a {agente.replace('_', ' ')} de "
+                    f"{intensidade} {subperiodo['unidade']}, superior ao limite de "
+                    f"{subperiodo['limite']}{subperiodo['unidade']} previsto no "
+                    f"{subperiodo['fundamento']}."
                 )
             else:
-                periodos_texto.append(
-                    f"de {subperiodo['data_inicio']} a "
-                    f"{subperiodo['data_fim']}"
+                texto = (
+                    f"O período de {subperiodo['data_inicio']} a {subperiodo['data_fim']} "
+                    f"não deve ser enquadrado como especial, por não ultrapassar o limite de "
+                    f"{subperiodo['limite']}{subperiodo['unidade']}, previsto no {subperiodo['fundamento']}."
                 )
         
-        texto = (
-            f"Dessa forma, reconheço como "
-            f"{'especial o período' if len(periodos_especiais) == 1 else 'especiais os períodos'} "
-            f"{', '.join(periodos_texto)}."
-        )
         minuta.append(texto)
-        minuta.append("")
+        minuta.append("")  # Adiciona uma linha em branco após cada análise de subperíodo
+
+    # 3. Conclusão
+    periodos_especiais = []
+    for resultado in resultados:
+        if resultado['subperiodo']['eh_especial']:
+            periodo = resultado['subperiodo']
+            periodos_especiais.append(
+                f"{periodo['data_inicio']} a {periodo['data_fim']}"
+            )
+
+    if periodos_especiais:
+        if len(periodos_especiais) == 1:
+            minuta.append(
+                f"Dessa forma, reconheço como especial o período de "
+                f"{periodos_especiais[0]}."
+            )
+        else:
+            minuta.append(
+                f"Dessa forma, reconheço como especiais os períodos de "
+                f"{', e '.join(periodos_especiais)}."
+            )
+    else:
+        minuta.append("Dessa forma, não reconheço nenhum período como especial.")
 
     return "\n".join(minuta)
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(debug=True)

@@ -24,8 +24,8 @@ def get_unidade_e_limite(data_fim: datetime, unidade_informada: str = None) -> T
 
     unidades_texto = {
         'gpm': 'golpes por minuto',
-        'ms2': 'm/s²',
-        'ms175': 'm/s1.75'
+        'ms2': 'm/s² (aren)',
+        'ms175': 'm/s1,75(VDVR)'
     }
 
     # Determina a unidade correta para o período
@@ -67,14 +67,14 @@ def avaliar_periodo(data_inicio: datetime, data_fim: datetime, intensidade: floa
     # Definição dos limites por unidade
     limites = {
         'gpm': 120,  # golpes por minuto
-        'ms2': 0.86 if data_fim < data_agosto_2014 else 1.1,  # m/s²
-        'ms175': 21.0  # m/s1.75
+        'ms2': 0.86 if data_fim < data_agosto_2014 else 1.1,  # m/s² (aren)
+        'ms175': 21.0  # m/s1,75 (VDVR)
     }
     
     unidades_texto = {
         'gpm': 'golpes por minuto',
-        'ms2': 'm/s²',
-        'ms175': 'm/s1.75'
+        'ms2': 'm/s² (aren)',
+        'ms175': 'm/s1,75(VDVR)'
     }
 
     # Prepara os dados básicos
@@ -84,13 +84,15 @@ def avaliar_periodo(data_inicio: datetime, data_fim: datetime, intensidade: floa
         'unidade': unidade_texto
     }
 
-    # Determina a unidade correta e limite para o período
+    # Determina a unidade correta, limite e fundamento legal para o período
     if data_fim < data_marco_1997:
         unidade_correta = 'gpm'
         limite_correto = limites['gpm']
+        fundamento = 'Anexo do Decreto nº 53.831/1964, código 1.1.5'
     elif data_fim < data_agosto_2014:
         unidade_correta = 'ms2'
         limite_correto = limites['ms2']
+        fundamento = 'Decreto nº 2.172/1997 e norma ISO 2631/1997'
     else:
         if unidade == 'ms175':
             unidade_correta = 'ms175'
@@ -98,22 +100,43 @@ def avaliar_periodo(data_inicio: datetime, data_fim: datetime, intensidade: floa
         else:
             unidade_correta = 'ms2'
             limite_correto = limites['ms2']
+        fundamento = 'Anexo 8, da NR-15, com as alterações da Portaria MTE nº 1.297/2014'
 
     # Sempre usa a unidade correta para o limite
     dados['limite'] = limite_correto
     dados['unidade_limite'] = unidades_texto[unidade_correta]  # Unidade específica para o limite
+    dados['fundamento'] = fundamento
 
     # Verifica se a unidade está correta para o período
     if unidade != unidade_correta:
-        mensagem = f"ATENÇÃO: Para este período (de {formatar_data(data_inicio)} a {formatar_data(data_fim)}), "
-        mensagem += f"a unidade de medida deve ser '{unidades_texto[unidade_correta]}'. "
-        mensagem += f"Valor informado: {intensidade} {unidade_texto}. "
-        mensagem += f"Limite do período: >{limite_correto} {unidades_texto[unidade_correta]}."
+        # Caso especial para período após 2014 onde são aceitas duas unidades
+        if data_fim >= datetime(2014, 8, 13).date() and unidade == 'gpm':
+            mensagem = (
+                f"Para este período (de {formatar_data(data_inicio)} a {formatar_data(data_fim)}), "
+                f"a unidade de medida deve ser 'm/s² (aren)' ou 'm/s1,75(VDVR)', enquanto as provas produzidas "
+                f"informam o valor em {unidade_texto}, o que não se enquadra no {fundamento}."
+            )
+        else:
+            mensagem = (
+                f"Para este período (de {formatar_data(data_inicio)} a {formatar_data(data_fim)}), "
+                f"a unidade de medida deve ser '{unidades_texto[unidade_correta]}', enquanto as provas produzidas "
+                f"informam o valor em {unidade_texto}, o que não se enquadra no {fundamento}."
+            )
+        dados['mensagem_unidade_inadequada'] = True
         return False, mensagem, dados
 
     # Se chegou aqui, a unidade está correta
     eh_especial = intensidade > limite_correto
-    mensagem = f"Intensidade informada: {intensidade} {unidade_texto}. Limite: >{limite_correto} {unidades_texto[unidade_correta]}."
+    if eh_especial:
+        mensagem = (
+            f"em razão de a intensidade informada de {intensidade} {unidade_texto} superar "
+            f"o limite de {limite_correto} {unidades_texto[unidade_correta]}, previsto no {fundamento}"
+        )
+    else:
+        mensagem = (
+            f"em razão de a intensidade informada de {intensidade} {unidade_texto} não superar "
+            f"o limite de {limite_correto} {unidades_texto[unidade_correta]}, previsto no {fundamento}"
+        )
     
     return eh_especial, mensagem, dados
 
@@ -151,7 +174,8 @@ def processar_periodo(data_inicio: datetime, data_fim: datetime, intensidade: fl
             'limite': dados.get('limite', ''),
             'unidade': dados.get('unidade', ''),
             'intensidade': dados.get('intensidade', ''),
-            'unidade_limite': dados.get('unidade_limite', '')  # Adicionando a unidade do limite
+            'unidade_limite': dados.get('unidade_limite', ''),  # Adicionando a unidade do limite
+            'fundamento': dados.get('fundamento', '')  # Adicionando o fundamento legal
         })
     
     return resultados

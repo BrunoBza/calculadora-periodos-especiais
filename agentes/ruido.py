@@ -8,16 +8,16 @@ DATAS_CORTE = [
     datetime(2003, 11, 19), # Mudança do limite de 90 dB(A) para 85 dB(A)
 ]
 
-def obter_limite(data: datetime) -> float:
-    """Retorna o limite de ruído para a data especificada."""
+def obter_limite_e_fundamento(data: datetime) -> tuple[float, str]:
+    """Retorna o limite de ruído e fundamento legal para a data especificada."""
     if isinstance(data, datetime):
         data = data.date()
         
     if data < DATAS_CORTE[0].date():
-        return 80.0
+        return 80.0, "código 1.1.6, do Anexo do Decreto Federal nº 53.831/1964"
     elif data < DATAS_CORTE[1].date():
-        return 90.0
-    return 85.0
+        return 90.0, "Anexo IV do Decreto Federal nº 2.172/1997 e Decreto nº 3.048/1999 (redação original)"
+    return 85.0, "código 2.0.1, do Anexo IV do Decreto Federal nº 3.048/1999, com redação dada pelo Decreto Federal nº 4.882/2003"
 
 def processar_periodo(data_inicio: datetime, data_fim: datetime, intensidade: float) -> List[Dict]:
     """
@@ -35,7 +35,7 @@ def processar_periodo(data_inicio: datetime, data_fim: datetime, intensidade: fl
     resultados = []
     
     for inicio_sub, fim_sub in subperiodos:
-        limite = obter_limite(inicio_sub)
+        limite, fundamento = obter_limite_e_fundamento(inicio_sub)
         eh_especial = intensidade > limite
         
         resultados.append(formatar_resultado(
@@ -45,7 +45,8 @@ def processar_periodo(data_inicio: datetime, data_fim: datetime, intensidade: fl
             intensidade=intensidade,
             eh_especial=eh_especial,
             limite=limite,
-            unidade='dB(A)'
+            unidade='dB(A)',
+            fundamento=fundamento
         ))
     
     return resultados

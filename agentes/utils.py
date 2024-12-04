@@ -49,7 +49,7 @@ def fragmentar_periodo(data_inicio, data_fim, datas_corte):
     
     return periodos
 
-def formatar_resultado(data_inicio, data_fim, agente, intensidade, eh_especial, limite=None, unidade="", detalhes=None):
+def formatar_resultado(data_inicio, data_fim, agente, intensidade, eh_especial, limite=None, unidade="", detalhes=None, fundamento=None):
     """
     Formata o resultado da análise de um subperíodo.
     
@@ -62,6 +62,7 @@ def formatar_resultado(data_inicio, data_fim, agente, intensidade, eh_especial, 
         limite: Valor limite para o período (opcional)
         unidade: Unidade de medida (opcional)
         detalhes: Informações adicionais específicas do agente (opcional)
+        fundamento: Fundamento legal para o período (opcional)
     
     Returns:
         Dicionário com as informações formatadas do subperíodo
@@ -80,5 +81,8 @@ def formatar_resultado(data_inicio, data_fim, agente, intensidade, eh_especial, 
         
     if detalhes:
         resultado['detalhes'] = detalhes
+        
+    if fundamento:
+        resultado['fundamento'] = fundamento
         
     return resultado
