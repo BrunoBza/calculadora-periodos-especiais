@@ -112,17 +112,20 @@ def avaliar_periodo(data_inicio: datetime, data_fim: datetime, intensidade: floa
         # Caso especial para período após 2014 onde são aceitas duas unidades
         if data_fim >= datetime(2014, 8, 13).date() and unidade == 'gpm':
             mensagem = (
-                f"Para este período (de {formatar_data(data_inicio)} a {formatar_data(data_fim)}), "
+                f"O período de {formatar_data(data_inicio)} a {formatar_data(data_fim)} não deve ser enquadrado como especial, "
+                f"em razão da utilização de metodologia inapropriada. Para este período (de {formatar_data(data_inicio)} a {formatar_data(data_fim)}), "
                 f"a unidade de medida deve ser 'm/s² (aren)' ou 'm/s1,75(VDVR)', enquanto as provas produzidas "
-                f"informam o valor em {unidade_texto}, o que não se enquadra no {fundamento}."
+                f"informam o valor em {unidade_texto}, o que não se enquadra no {fundamento}"
             )
         else:
             mensagem = (
-                f"Para este período (de {formatar_data(data_inicio)} a {formatar_data(data_fim)}), "
+                f"O período de {formatar_data(data_inicio)} a {formatar_data(data_fim)} não deve ser enquadrado como especial, "
+                f"em razão da utilização de metodologia inapropriada. Para este período (de {formatar_data(data_inicio)} a {formatar_data(data_fim)}), "
                 f"a unidade de medida deve ser '{unidades_texto[unidade_correta]}', enquanto as provas produzidas "
-                f"informam o valor em {unidade_texto}, o que não se enquadra no {fundamento}."
+                f"informam o valor em {unidade_texto}, o que não se enquadra no {fundamento}"
             )
         dados['mensagem_unidade_inadequada'] = True
+        dados['mensagem_completa'] = mensagem
         return False, mensagem, dados
 
     # Se chegou aqui, a unidade está correta

@@ -212,12 +212,7 @@ def gerar_minuta(resultados):
             if not subperiodo['eh_especial']:
                 # Verifica se é caso de unidade inadequada
                 if subperiodo.get('mensagem_unidade_inadequada', False):
-                    data_inicio = subperiodo['data_inicio']
-                    data_fim = subperiodo['data_fim']
-                    texto = (
-                        f"O período de {data_inicio} a {data_fim} não deve ser enquadrado como especial, "
-                        f"em razão da utilização de metodologia inapropriada."
-                    )
+                    texto = f"{subperiodo['mensagem']}."
                 else:
                     texto = (
                         f"O período de {subperiodo['data_inicio']} a {subperiodo['data_fim']} "
